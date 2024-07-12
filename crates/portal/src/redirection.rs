@@ -1,3 +1,4 @@
+use std::cmp;
 use std::cmp::Ordering;
 
 use crate::Portal;
@@ -9,20 +10,18 @@ const DIRECTIONS: [(i16, i16); 4] = [(-1, 1), (-1, -1), (1, -1), (1, 1)];
 pub enum RedirectionError {
     #[error("Fail to determine redirection")]
     Failed,
+    #[error("Unexpected triple equidistant result")]
+    UnexpectedTripleEquidistant,
 }
 
 #[derive(Debug, Clone)]
 pub struct Redirection {
     pub sorted_portals: Vec<Portal>,
-    size: usize,
 }
 
 impl Redirection {
-    pub fn new(sorted_portals: Vec<Portal>, size: usize) -> Redirection {
-        Redirection {
-            sorted_portals,
-            size,
-        }
+    pub fn new(sorted_portals: Vec<Portal>) -> Redirection {
+        Redirection { sorted_portals }
     }
 
     pub fn get_all_equidistant(distance: i16, position: &Position) -> Vec<Position> {
@@ -93,8 +92,80 @@ impl Redirection {
         p2: usize,
         p3: usize,
         portals: &[Portal],
-    ) -> usize {
-        p1
+    ) -> Result<usize, RedirectionError> {
+        let entry_portal_position = &portals[entry_portal].position;
+        let distance = entry_portal_position.distance(&portals[p1].position);
+        let equidistant_positions = Self::get_all_equidistant(distance, entry_portal_position);
+        let mut indexes: Vec<(usize, i16)> = [p1, p2, p3]
+            .iter()
+            .map(|p| {
+                let position = &portals[*p].position;
+                (
+                    *p,
+                    equidistant_positions
+                        .iter()
+                        .position(|pos| pos == position)
+                        .unwrap() as i16,
+                )
+            })
+            .collect();
+        indexes.sort_by_key(|p| p.1);
+        let circle_length = distance * 4;
+        let circle_half_length = distance * 2;
+        let distance_p1_p2 = cmp::min(
+            indexes[1].1.abs_diff(indexes[0].1) as i16,
+            circle_length - indexes[1].1.abs_diff(indexes[0].1) as i16,
+        );
+        let distance_p2_p3 = cmp::min(
+            indexes[2].1.abs_diff(indexes[1].1) as i16,
+            circle_length - indexes[2].1.abs_diff(indexes[1].1) as i16,
+        );
+        let distance_p1_p3 = cmp::min(
+            indexes[2].1.abs_diff(indexes[0].1) as i16,
+            circle_length - indexes[2].1.abs_diff(indexes[0].1) as i16,
+        );
+        let maximum_distance = *[distance_p1_p2, distance_p2_p3, distance_p1_p3]
+            .iter()
+            .max()
+            .unwrap();
+        let mut contained = false;
+        let mut contained_outer1 = None;
+        let mut contained_outer2 = None;
+        if maximum_distance == distance_p1_p2 && distance_p1_p3 + distance_p2_p3 == distance_p1_p2 {
+            contained = true;
+            contained_outer1 = Some(p1);
+            contained_outer2 = Some(p2);
+        }
+        if maximum_distance == distance_p2_p3 && distance_p1_p3 + distance_p1_p3 == distance_p2_p3 {
+            contained = true;
+            contained_outer1 = Some(p2);
+            contained_outer2 = Some(p3);
+        }
+        if maximum_distance == distance_p1_p3 && distance_p1_p2 + distance_p2_p3 == distance_p1_p3 {
+            contained = true;
+            contained_outer1 = Some(p1);
+            contained_outer2 = Some(p3);
+        }
+        if !contained {
+            for index in indexes.iter() {
+                if index.1 == 0 {
+                    return Ok(index.0);
+                }
+            }
+            Ok(indexes[2].0)
+        } else {
+            match (contained_outer1, contained_outer2) {
+                (Some(contained_outer1), Some(contained_outer2)) => {
+                    let dist_outer = contained_outer2.abs_diff(contained_outer1);
+                    if dist_outer as i16 > circle_half_length {
+                        Ok(contained_outer2)
+                    } else {
+                        Ok(contained_outer1)
+                    }
+                }
+                _ => Err(RedirectionError::UnexpectedTripleEquidistant),
+            }
+        }
     }
 
     // Find the closest portal from the entry portal
@@ -152,7 +223,7 @@ impl Redirection {
                     closest_portals[1],
                     closest_portals[2],
                     portals,
-                ),
+                )?,
                 _ => return Err(RedirectionError::Failed),
             };
             state.push(closest_portal);
@@ -160,7 +231,6 @@ impl Redirection {
         }
         Ok(Redirection::new(
             state.iter().map(|i| portals[*i].clone()).collect(),
-            0,
         ))
     }
 }
