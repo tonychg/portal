@@ -1,7 +1,7 @@
-pub mod map;
-pub mod portal;
-pub mod position;
-pub mod redirection;
+mod map;
+mod portal;
+mod position;
+mod redirection;
 
 pub use crate::map::{Cell, Map};
 pub use crate::portal::Portal;

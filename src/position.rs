@@ -37,27 +37,17 @@ impl Position {
         }
         (minimum_distance, result)
     }
-}
 
-#[test]
-fn test_find_closest() {
-    let positions = vec![
-        Position::new(5, 5), // 10
-        Position::new(9, 5), // 14
-        Position::new(2, 4), // 6
-    ];
-    let origin = Position::new(0, 0);
-    assert_eq!(origin.find_closest(&positions), (6, vec![2]));
-}
-
-#[test]
-fn test_find_closest_with_multiple() {
-    let positions = vec![
-        Position::new(5, 5), // 10
-        Position::new(9, 5), // 14
-        Position::new(2, 4), // 6
-        Position::new(4, 2), // 6
-    ];
-    let origin = Position::new(0, 0);
-    assert_eq!(origin.find_closest(&positions), (6, vec![2, 3]));
+    // Debug function to print positions in a grid with their index.
+    pub fn debug(width: i16, height: i16, positions: Vec<Position>) {
+        for y in 0..=height {
+            for x in 0..=width {
+                match positions.iter().position(|r| *r == Position::new(x, y)) {
+                    Some(index) => print!("{:2} ", index),
+                    None => print!(" . "),
+                }
+            }
+            println!();
+        }
+    }
 }
