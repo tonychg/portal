@@ -51,7 +51,39 @@ impl Redirection {
         p2: usize,
         portals: &[Portal],
     ) -> usize {
-        p1
+        let entry_portal_position = &portals[entry_portal].position;
+        let p1_position = &portals[p1].position;
+        let p2_position = &portals[p2].position;
+        let distance = entry_portal_position.distance(&portals[p1].position);
+        let equidistant_positions = Self::get_all_equidistant(distance, entry_portal_position);
+        let p1_index = equidistant_positions
+            .iter()
+            .position(|p| p == p1_position)
+            .unwrap();
+        let p2_index = equidistant_positions
+            .iter()
+            .position(|p| p == p2_position)
+            .unwrap();
+        let circle_half_length = 2 * distance;
+        if p1_index.abs_diff(p2) as i16 == circle_half_length {
+            if (4 * circle_half_length - p1_index as i16) < 8 {
+                p1
+            } else {
+                p2
+            }
+        } else {
+            let circle_half_length = 4 * distance;
+            let dist_p1_p2 = if p1_index > p2_index {
+                p1_index - p2_index
+            } else {
+                p2_index - p1_index
+            };
+            if dist_p1_p2 as i16 > circle_half_length {
+                p2
+            } else {
+                p1
+            }
+        }
     }
 
     // Find the closest portal when there are three equidistant portals
