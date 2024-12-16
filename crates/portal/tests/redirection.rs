@@ -1,4 +1,4 @@
-use portal::{Position, Redirection};
+use portal::{Portal, Position, Redirection};
 
 #[test]
 fn test_get_all_equidistant() {
@@ -32,4 +32,26 @@ fn test_get_all_equidistant() {
             Position::new(7, 4)
         ]
     );
+}
+
+#[test]
+fn test_find_closest() {
+    let portals = vec![
+        Portal::new(Position::new(0, 0)),
+        Portal::new(Position::new(5, 5)), // 10
+        Portal::new(Position::new(9, 5)), // 14
+        Portal::new(Position::new(2, 4)), // 6
+    ];
+    assert_eq!(Redirection::find_closest(0, &portals, &[]), vec![3]);
+}
+
+#[test]
+fn test_find_closest_with_multiple() {
+    let portals = vec![
+        Portal::new(Position::new(0, 0)),
+        Portal::new(Position::new(9, 5)), // 14
+        Portal::new(Position::new(2, 4)), // 6
+        Portal::new(Position::new(4, 2)), // 6
+    ];
+    assert_eq!(Redirection::find_closest(0, &portals, &[]), vec![2, 3]);
 }
